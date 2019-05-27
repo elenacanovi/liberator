@@ -278,7 +278,10 @@
 
 (defdecision method-post? (partial =method :post) post! put!)
 
-(defdecision conflict? handle-conflict method-post?)
+(defdecision method-patch? (partial =method :patch) patch! method-post?)
+
+;(defdecision conflict? handle-conflict method-post?)
+(defdecision conflict? handle-conflict method-patch?)
 
 (defhandler handle-not-implemented 501 "Not implemented.")
 
@@ -312,12 +315,18 @@
 
 (defaction delete! delete-enacted?)
 
-(defdecision method-patch? (partial =method :patch) patch! post-to-existing?)
+;(defdecision method-patch? (partial =method :patch) patch! post-to-existing?)
+
+
+
+(defdecision patch-to-existing? (partial =method :patch) conflict? post-to-existing?)
 
 (defdecision method-delete?
   (partial =method :delete)
   delete!
-  method-patch?)
+  ;method-patch?
+  patch-to-existing?
+  )
 
 (defdecision modified-since?
   (fn [context]
