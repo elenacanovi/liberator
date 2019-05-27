@@ -322,7 +322,7 @@
 (defdecision modified-since?
   (fn [context]
     (let [last-modified (gen-last-modified context)]
-      [(and last-modified (.after last-modified (::if-modified-since-date context)))
+      [(or (not last-modified) (.after last-modified (::if-modified-since-date context)))
        {::last-modified last-modified}]))
   method-delete?
   handle-not-modified)
@@ -417,13 +417,12 @@
   encoding-available? processable?)
 
 (defdecision charset-available?
-  #(try-header "Accept-Charset"
-               (when-let [charset (conneg/best-allowed-charset
-                                   (get-in % [:request :headers "accept-charset"])
-                                   ((get-in context [:resource :available-charsets]) context))]
-                 (if (= charset "*")
-                   true
-                   {:representation {:charset charset}})))
+  #(when-let [charset (conneg/best-allowed-charset
+                       (get-in % [:request :headers "accept-charset"])
+                       ((get-in context [:resource :available-charsets]) context))]
+     (if (= charset "*")
+       true
+       {:representation {:charset charset}}))
   accept-encoding-exists? handle-not-acceptable)
 
 (defdecision accept-charset-exists? (partial header-exists? "accept-charset")
@@ -431,13 +430,12 @@
 
 
 (defdecision language-available?
-  #(try-header "Accept-Language"
-               (when-let [lang (conneg/best-allowed-language
-                                (get-in % [:request :headers "accept-language"])
-                                ((get-in context [:resource :available-languages]) context))]
-                 (if (= lang "*")
-                   true
-                   {:representation {:language lang}})))
+  #(when-let [lang (conneg/best-allowed-language
+                   (get-in % [:request :headers "accept-language"])
+                   ((get-in context [:resource :available-languages]) context))]
+    (if (= lang "*")
+      true
+      {:representation {:language lang}}))
   accept-charset-exists? handle-not-acceptable)
 
 (defdecision accept-language-exists? (partial header-exists? "accept-language")
@@ -615,17 +613,24 @@
   (fn [request]
     (run-resource request (get-options kvs))))
 
-(defmacro defresource [name & kvs]
-  (if (vector? (first kvs))
-    (let [args (first kvs)
-          kvs (rest kvs)]
-      ;; Rather than call resource, create anonymous fn in callers namespace for better debugability.
-      `(defn ~name [~@args]
-         (fn [request#]
-           (run-resource request# (get-options (list ~@kvs))))))
-    `(def ~name
-         (fn [request#]
-           (run-resource request# (get-options (list ~@kvs)))))))
+(defmacro defresource [name & resource-decl]
+  (let [[docstring resource-decl] (if (string? (first resource-decl))
+                                    [(first resource-decl) (rest resource-decl)]
+                                    [nil resource-decl])
+        [args kvs] (if (vector? (first resource-decl))
+                     [(first resource-decl) (rest resource-decl)]
+                     [nil resource-decl])
+        ;; Rather than call `resource` directly, create an anonymous
+        ;; function in the caller's namespace for better debugability.
+        resource-fn `(fn [request#]
+                       (run-resource request# (get-options (list ~@kvs))))]
+    (if args
+      (if docstring
+        `(defn ~name ~docstring [~@args] ~resource-fn)
+        `(defn ~name [~@args] ~resource-fn))
+      (if docstring
+        `(def ~name ~docstring ~resource-fn)
+        `(def ~name ~resource-fn)))))
 
 (defn by-method
   "returns a handler function that uses the request method to

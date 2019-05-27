@@ -41,6 +41,13 @@
       (fact resp => (no-body))
       (fact resp => (header-value "Last-Modified" (http-date (as-date 1000))))))
 
+  (facts "if-modified-since false due to missing last-modified"
+    (let [resp ((resource :exists? true)
+                (-> (request :get "/")
+                    (if-modified-since (http-date (as-date 1000)))))]
+      (fact resp => OK)
+      (fact resp => (body "OK"))))
+
   (facts "if-unmodified-since true"
     (let [resp ((resource :exists? true
                           :last-modified (as-date 1000)
@@ -95,7 +102,7 @@
 
 
 ;; put and post requests
-(tabular 
+(tabular
  (facts "conditional request for post and put"
    (facts "if-modified-since true"
      (let [resp ((resource :exists? true
@@ -192,7 +199,7 @@
 
 
 (facts "if-match * false on unexisting"
-  (tabular 
+  (tabular
    (let [resp ((resource :method-allowed? true
                          :exists? false
                          :etag (constantly "TAG1"))
@@ -206,7 +213,7 @@
    :delete))
 
 (facts "if-none-match * false on existing"
-  (tabular 
+  (tabular
    (let [resp ((resource :method-allowed? true
                          :exists? true
                          :etag (constantly "TAG1"))
@@ -220,4 +227,3 @@
    :post
    :put
    :delete))
-

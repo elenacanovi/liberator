@@ -1,8 +1,34 @@
 # Changelog
 
-# Unreleased 
+# Unreleased changes
 
-* Removed javax.xml.ws dependency
+## Changes
+
+* Return 304 not modified if request contains a if-modified-since
+  header and the resource does not specify modification date. This
+  is a better default for clients that do no handle resources without
+  a modification date well.
+
+## Bugs fixes
+
+# New in 0.15.3
+
+* Remove old examples. These dependet on an ancient clojurescript
+  version which blocked updating some dependencies
+* Update clojure versions in the build matrix.
+* Allow `defresource` to have a docstring (#305)
+* Improve `liberator.util/combine` to not return lazy sequences (#304)
+
+## Bugs fixed
+
+* Use minimum quality value when one provided is malformed (#199)
+
+# New in 0.15.2
+
+## Bugs fixed
+
+* Log sequence could grow beyond limit (#295)
+* Removed javax.xml.ws dependency (#290)
 
 # New in 0.15.1
 
